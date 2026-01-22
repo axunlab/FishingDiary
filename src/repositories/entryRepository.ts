@@ -101,3 +101,13 @@ export async function getRecentEntries(limit: number = 10): Promise<FishingEntry
     .limit(limit)
     .toArray();
 }
+
+// Clear all entries (for import)
+export async function clearAllEntries(): Promise<void> {
+  await db.entries.clear();
+}
+
+// Bulk insert entries (for import)
+export async function bulkInsertEntries(entries: FishingEntry[]): Promise<void> {
+  await db.entries.bulkAdd(entries);
+}

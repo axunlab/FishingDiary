@@ -6,6 +6,7 @@ import { EntryList } from './components/EntryList';
 import { EntryForm } from './components/EntryForm';
 import { EntryDetail } from './components/EntryDetail';
 import { Settings } from './components/Settings';
+import * as exportImportService from './services/exportImportService';
 
 type View = 'list' | 'add' | 'edit' | 'detail' | 'settings';
 
@@ -20,14 +21,16 @@ function App() {
     error: entriesError,
     createEntry,
     updateEntry,
-    deleteEntry
+    deleteEntry,
+    refresh: refreshEntries
   } = useEntries();
 
   const {
     settings,
     loading: settingsLoading,
     updateSettings,
-    resetSettings
+    resetSettings,
+    refresh: refreshSettings
   } = useSettings();
 
   // Navigation handlers
@@ -79,6 +82,21 @@ function App() {
 
   const handleResetSettings = async () => {
     await resetSettings();
+  };
+
+  // Export/Import handlers
+  const handleExport = async () => {
+    await exportImportService.downloadExport();
+  };
+
+  const handleImport = async (file: File) => {
+    const result = await exportImportService.importData(file);
+    if (result.success) {
+      // Refresh both entries and settings after successful import
+      await refreshEntries();
+      await refreshSettings();
+    }
+    return result;
   };
 
   return (
@@ -146,6 +164,8 @@ function App() {
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
             onReset={handleResetSettings}
+            onExport={handleExport}
+            onImport={handleImport}
           />
         )}
       </main>

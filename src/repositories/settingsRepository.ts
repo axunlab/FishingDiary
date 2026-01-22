@@ -33,3 +33,8 @@ export async function resetSettings(): Promise<void> {
 
   await db.settings.put({ key: SETTINGS_KEY, value: defaultSettings });
 }
+
+// Replace settings completely (for import)
+export async function replaceSettings(settings: AppSettings): Promise<void> {
+  await db.settings.put({ key: SETTINGS_KEY, value: settings });
+}
