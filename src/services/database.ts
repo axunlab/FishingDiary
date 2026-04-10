@@ -29,7 +29,8 @@ export async function initializeDefaultSettings(): Promise<void> {
     const defaultSettings: AppSettings = {
       preferredUnits: 'metric',
       theme: 'auto',
-      dateFormat: 'DD/MM/YYYY'
+      dateFormat: 'DD/MM/YYYY',
+      backupReminderDays: 7
     };
 
     await db.settings.put({ key: 'appSettings', value: defaultSettings });

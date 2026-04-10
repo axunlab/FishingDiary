@@ -6,7 +6,10 @@ export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>({
     preferredUnits: 'metric',
     theme: 'auto',
-    dateFormat: 'dd/MM/yyyy'
+    dateFormat: 'dd/MM/yyyy',
+    backupReminderDays: 7,
+    storageIsPersistent: undefined,
+    lastBackupAt: undefined
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

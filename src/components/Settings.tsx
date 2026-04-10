@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { format } from 'date-fns';
 import { AppSettings } from '../types';
 import { ImportResult } from '../services/exportImportService';
 
@@ -8,9 +9,10 @@ interface SettingsProps {
   onReset: () => Promise<void>;
   onExport: () => Promise<void>;
   onImport: (file: File) => Promise<ImportResult>;
+  onRequestPersistence: () => Promise<boolean | null>;
 }
 
-export function Settings({ settings, onUpdateSettings, onReset, onExport, onImport }: SettingsProps) {
+export function Settings({ settings, onUpdateSettings, onReset, onExport, onImport, onRequestPersistence }: SettingsProps) {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [saving, setSaving] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -232,6 +234,30 @@ export function Settings({ settings, onUpdateSettings, onReset, onExport, onImpo
           </p>
         </div>
 
+        {/* Backup Reminder Interval */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Backup Reminder
+          </label>
+          <select
+            value={localSettings.backupReminderDays ?? 7}
+            onChange={(e) => setLocalSettings({
+              ...localSettings,
+              backupReminderDays: Number(e.target.value)
+            })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+          >
+            <option value={3}>Every 3 days</option>
+            <option value={7}>Every 7 days (recommended)</option>
+            <option value={14}>Every 14 days</option>
+            <option value={30}>Every 30 days</option>
+            <option value={0}>Disabled</option>
+          </select>
+          <p className="mt-1 text-sm text-gray-500">
+            How often to remind you to export a backup
+          </p>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
           <button
@@ -248,6 +274,47 @@ export function Settings({ settings, onUpdateSettings, onReset, onExport, onImpo
             Reset
           </button>
         </div>
+      </div>
+
+      {/* Storage Status */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Storage Status</h3>
+
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Persistent Storage</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Prevents the browser from clearing your data under storage pressure
+            </p>
+          </div>
+          <span className={`shrink-0 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold ${
+            settings.storageIsPersistent === true
+              ? 'bg-green-100 text-green-700'
+              : settings.storageIsPersistent === false
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-gray-100 text-gray-500'
+          }`}>
+            {settings.storageIsPersistent === true
+              ? 'Granted'
+              : settings.storageIsPersistent === false
+              ? 'Not granted'
+              : 'Not supported'}
+          </span>
+        </div>
+
+        {settings.storageIsPersistent === false && (
+          <button
+            onClick={onRequestPersistence}
+            className="w-full bg-sky-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-sky-600 transition-colors mb-3"
+          >
+            Request Persistent Storage
+          </button>
+        )}
+
+        <p className="text-xs text-gray-400">
+          On iOS Safari, persistent storage requires the app to be added to your Home Screen.
+          Regular backups remain the most reliable protection against data loss.
+        </p>
       </div>
 
       {/* Data Management */}
@@ -287,7 +354,15 @@ export function Settings({ settings, onUpdateSettings, onReset, onExport, onImpo
             </label>
           </div>
         </div>
-        <p className="mt-4 text-xs text-gray-500">
+        <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+          <span className="text-sm text-gray-600">Last backup:</span>
+          <span className="text-sm font-medium text-gray-800">
+            {settings.lastBackupAt
+              ? format(new Date(settings.lastBackupAt), settings.dateFormat || 'dd/MM/yyyy')
+              : 'Never'}
+          </span>
+        </div>
+        <p className="mt-3 text-xs text-gray-500">
           Note: Importing will replace all existing entries and settings with the imported data.
         </p>
       </div>

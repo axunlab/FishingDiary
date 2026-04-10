@@ -43,6 +43,9 @@ export interface AppSettings {
   preferredUnits: 'metric' | 'imperial';
   theme: 'light' | 'dark' | 'auto';
   dateFormat: string;            // e.g., "DD/MM/YYYY" or "MM/DD/YYYY"
+  lastBackupAt?: string;         // ISO-8601 string; undefined = never backed up
+  backupReminderDays?: number;   // default 7; 0 = reminders disabled
+  storageIsPersistent?: boolean; // cached result of navigator.storage.persisted()
 }
 
 // Form data types (for editing/creating entries)

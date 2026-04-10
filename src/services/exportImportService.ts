@@ -236,8 +236,10 @@ export async function importData(file: File): Promise<ImportResult> {
       await entryRepository.bulkInsertEntries(entries);
     }
 
-    // Replace settings
-    await settingsRepository.replaceSettings(data.data.settings);
+    // Replace settings, stripping device-specific fields that should not be imported
+    const settingsToImport = { ...data.data.settings };
+    delete settingsToImport.storageIsPersistent;
+    await settingsRepository.replaceSettings(settingsToImport);
 
     return {
       success: true,

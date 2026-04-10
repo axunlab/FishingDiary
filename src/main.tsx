@@ -3,14 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { initializeDatabase } from './services/database'
+import { requestPersistentStorage } from './services/persistenceService'
 
-// Initialize database before rendering app
-initializeDatabase().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  )
-}).catch(error => {
-  console.error('Failed to initialize database:', error)
-})
+// Initialize database then request persistent storage before rendering app
+initializeDatabase()
+  .then(() => requestPersistentStorage())
+  .then(() => {
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+  })
+  .catch(error => {
+    console.error('Failed to initialize database:', error)
+  })

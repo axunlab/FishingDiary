@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FishingEntry, FishingEntryFormData } from './types';
 import { useEntries } from './hooks/useEntries';
 import { useSettings } from './hooks/useSettings';
@@ -7,12 +7,15 @@ import { EntryForm } from './components/EntryForm';
 import { EntryDetail } from './components/EntryDetail';
 import { Settings } from './components/Settings';
 import * as exportImportService from './services/exportImportService';
+import { isBackupOverdue, markBackupComplete, requestPersistentStorage } from './services/persistenceService';
 
 type View = 'list' | 'add' | 'edit' | 'detail' | 'settings';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('list');
   const [selectedEntry, setSelectedEntry] = useState<FishingEntry | null>(null);
+  const [showBackupBanner, setShowBackupBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Use custom hooks
   const {
@@ -32,6 +35,34 @@ function App() {
     resetSettings,
     refresh: refreshSettings
   } = useSettings();
+
+  // Show backup banner when backup is overdue
+  useEffect(() => {
+    if (settingsLoading) return;
+    const overdue = isBackupOverdue(settings.lastBackupAt, settings.backupReminderDays ?? 7);
+    setShowBackupBanner(overdue && !bannerDismissed);
+  }, [settings, settingsLoading, bannerDismissed]);
+
+  // Re-surface backup banner on app focus/visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        const overdue = isBackupOverdue(settings.lastBackupAt, settings.backupReminderDays ?? 7);
+        if (overdue) {
+          setBannerDismissed(false);
+          setShowBackupBanner(true);
+        }
+      } else if (document.visibilityState === 'visible') {
+        const overdue = isBackupOverdue(settings.lastBackupAt, settings.backupReminderDays ?? 7);
+        if (overdue && !bannerDismissed) {
+          setShowBackupBanner(true);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [settings.lastBackupAt, settings.backupReminderDays, bannerDismissed]);
 
   // Navigation handlers
   const navigateToList = () => {
@@ -87,6 +118,16 @@ function App() {
   // Export/Import handlers
   const handleExport = async () => {
     await exportImportService.downloadExport();
+    await markBackupComplete();
+    await refreshSettings();
+    setShowBackupBanner(false);
+    setBannerDismissed(false);
+  };
+
+  const handleRequestPersistence = async (): Promise<boolean | null> => {
+    const result = await requestPersistentStorage();
+    await refreshSettings();
+    return result;
   };
 
   const handleImport = async (file: File) => {
@@ -110,6 +151,38 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-6 pb-24">
+        {/* Backup Reminder Banner */}
+        {showBackupBanner && (
+          <div className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <p className="text-sm font-medium">
+                {settings.lastBackupAt ? `Your last backup was more than ${settings.backupReminderDays ?? 7} days ago.` : 'You have never backed up your data.'}{' '}
+                Export to avoid losing your entries.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleExport}
+                className="text-sm font-semibold underline hover:no-underline whitespace-nowrap"
+              >
+                Back up now
+              </button>
+              <button
+                onClick={() => { setShowBackupBanner(false); setBannerDismissed(true); }}
+                aria-label="Dismiss backup reminder"
+                className="text-amber-600 hover:text-amber-900"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
         {entriesError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -166,6 +239,7 @@ function App() {
             onReset={handleResetSettings}
             onExport={handleExport}
             onImport={handleImport}
+            onRequestPersistence={handleRequestPersistence}
           />
         )}
       </main>
